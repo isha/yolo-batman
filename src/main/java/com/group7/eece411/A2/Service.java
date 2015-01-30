@@ -49,7 +49,7 @@ public class Service
 					e.printStackTrace();
 				}
     		}
-    	}, 0, 10000);   
+    	}, 0, 30000);   
 		this.isStop = false;
     }
     

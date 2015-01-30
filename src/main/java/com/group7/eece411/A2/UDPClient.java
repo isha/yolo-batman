@@ -73,7 +73,7 @@ public class UDPClient {
 		DatagramPacket packet = new DatagramPacket(request, request.length, InetAddress.getByName(host), Integer.valueOf(port));
 		socket.send(packet);	
 	}
-	
+	 
 	public byte[] receive() throws SocketException, IOException { 
         this.createSocket();
         byte buffer[] = new byte[16384];        
