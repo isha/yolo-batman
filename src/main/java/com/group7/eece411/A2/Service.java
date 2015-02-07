@@ -23,15 +23,20 @@ import org.json.simple.parser.ParseException;
  */
 public class Service 
 {	
+	public enum GossipState {
+		ACTIVE_GOSSIP, PASSIVE_GOSSIP, WAIT_FOR_INIT
+	}
 	private JSONObject loc;
 	private UDPClient client;
 	private Timer timer;
 	private boolean isStop;
+	private GossipState currentState;
 	
 	public Service() throws MalformedURLException, UnknownHostException, IOException, ParseException {
 		this.loc = request("http://ip-api.com/json/"+InetAddress.getLocalHost().getHostAddress(), "GET");
 		this.client = new UDPClient(5628);  
 		this.isStop = true;
+		this.currentState = GossipState.WAIT_FOR_INIT;
 	}
 	
     public void run(final String host, final String port) throws Exception
