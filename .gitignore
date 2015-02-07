@@ -44,3 +44,6 @@ local.properties
 *.jar
 *.war
 *.ear
+
+# Maven build stuff
+target/*
