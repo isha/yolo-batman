@@ -7,7 +7,12 @@ public class Application {
 		UDPClient client = new UDPClient(7777);
 		client.setTimeout(0); 	
 		String msg;
-		String monitorServer = "54.68.197.12";
+		
+		/* IP address of AWS server running monitor_server */
+		// String monitorServer = "54.68.197.12";
+		/* Localhost (make sure local monitor_server is listening for UDP messages on port 5700 */
+		String monitorServer = "127.0.0.1";
+		
 		String monitorPort = "5700";
 		Service monitorService = new Service();
 		monitorService.run(monitorServer, monitorPort);
