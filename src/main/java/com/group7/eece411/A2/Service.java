@@ -11,6 +11,7 @@ import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 import org.json.simple.JSONObject;
@@ -27,6 +28,7 @@ public class Service
 		ACTIVE_GOSSIP, PASSIVE_GOSSIP, WAIT_FOR_INIT
 	}
 	private JSONObject loc;
+	private ConcurrentHashMap<String, ConcurrentHashMap<String, String>> statsData;
 	private UDPClient client;
 	private Timer timer;
 	private boolean isStop;
@@ -48,7 +50,8 @@ public class Service
 		this.timer.scheduleAtFixedRate(new TimerTask() {
     		public void run() {
     			try {
-					client.send(host, port, getData().toJSONString());
+    				String dataString = new JSONObject(getData()).toJSONString();
+					client.send(host, port, dataString);
 				} catch (Exception e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -87,23 +90,30 @@ public class Service
     
     @SuppressWarnings("unchecked")
 	public JSONObject getData() throws IOException, java.text.ParseException {
-    	JSONObject obj=new JSONObject();
-		obj.put("hostname", SystemCmd.getHostName());
-		obj.put("systemUptime", SystemCmd.uptime());
-		obj.put("deploySize", SystemCmd.getFileSize("filename"));
-		obj.put("spaceAvailable", SystemCmd.getDiskAvailableSize());
-		obj.put("averageLoads", SystemCmd.getLoad());
-		long millis = ManagementFactory.getRuntimeMXBean().getUptime();
-		long days = TimeUnit.MILLISECONDS.toDays(millis);
-		long hours = TimeUnit.MILLISECONDS.toHours(millis) - TimeUnit.DAYS.toHours(days);
-		long minutes = TimeUnit.MILLISECONDS.toMinutes(millis) - TimeUnit.DAYS.toMinutes(days) - TimeUnit.HOURS.toMinutes(hours);
-		obj.put("serviceUptime", days + " days " + hours + " hours " + minutes + " minutes");
-		obj.put("latitude", loc.get("lat"));
-		obj.put("longitude", loc.get("lon"));
-		obj.put("city", loc.get("city"));
-		obj.put("country", loc.get("country"));
-		obj.put("isp", loc.get("isp"));	
-		//System.out.println(obj.toJSONString());
-		return obj;
+    	statsData = new ConcurrentHashMap<String, ConcurrentHashMap<String, String>>();
+    	ConcurrentHashMap<String, String> currentData = new ConcurrentHashMap<String, String>();
+		
+    	
+    	currentData.put("hostname", SystemCmd.getHostName());
+    	currentData.put("systemUptime", SystemCmd.uptime());
+    	currentData.put("deploySize", String.valueOf(SystemCmd.getFileSize("filename")));
+    	currentData.put("spaceAvailable", String.valueOf(SystemCmd.getDiskAvailableSize()));
+    	currentData.put("averageLoads", SystemCmd.getLoad());
+    	long millis = ManagementFactory.getRuntimeMXBean().getUptime();
+    	long days = TimeUnit.MILLISECONDS.toDays(millis);
+    	long hours = TimeUnit.MILLISECONDS.toHours(millis) - TimeUnit.DAYS.toHours(days);
+    	long minutes = TimeUnit.MILLISECONDS.toMinutes(millis) - TimeUnit.DAYS.toMinutes(days) - TimeUnit.HOURS.toMinutes(hours);
+    	currentData.put("serviceUptime", days + " days " + hours + " hours " + minutes + " minutes");
+    	currentData.put("latitude", String.valueOf(loc.get("lat")));
+    	currentData.put("longitude", String.valueOf(loc.get("lon")));
+    	currentData.put("city", String.valueOf(loc.get("city")));
+    	currentData.put("country", String.valueOf(loc.get("country")));
+    	currentData.put("isp", String.valueOf(loc.get("isp"))); 
+    	
+		statsData.put(SystemCmd.getHostName(), currentData);
+		
+		// Temporary workaround - dont need this once node server can understand hostname: statsdata KV store
+		JSONObject tmp = new JSONObject(currentData);
+		return tmp;
     }
 }
