@@ -1,119 +1,134 @@
 package com.group7.eece411.A2;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.lang.management.ManagementFactory;
-import java.net.HttpURLConnection;
-import java.net.InetAddress;
+import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
-import java.net.URL;
 import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.Set;
 import java.util.Timer;
-import java.util.TimerTask;
+import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 
 import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
+import org.json.simple.JSONValue;
 import org.json.simple.parser.ParseException;
 
 /**
  * 
  *
  */
-public class Service 
-{	
+public class Service {
+	private static int GOSSIP_DELAY_MS = 2000;
+
 	public enum GossipState {
-		ACTIVE_GOSSIP, PASSIVE_GOSSIP, WAIT_FOR_INIT
+		STOPPED, WAIT_FOR_INIT, ACTIVE_GOSSIP, PASSIVE_GOSSIP
 	}
-	private JSONObject loc;
-	private ConcurrentHashMap<String, ConcurrentHashMap<String, String>> statsData;
-	private UDPClient client;
+
+	private HostPort[] hostPorts = { new HostPort("127.0.0.1", "7777") };
+	private ConcurrentHashMap<String, JSONObject> statsData;
 	private Timer timer;
-	private boolean isStop;
 	private GossipState currentState;
-	
-	public Service() throws MalformedURLException, UnknownHostException, IOException, ParseException {
-		this.loc = request("http://ip-api.com/json/"+InetAddress.getLocalHost().getHostAddress(), "GET");
-		this.client = new UDPClient(5628);  
-		this.isStop = true;
+	private GossipTimerTask gossipTimerTask;
+	private Vector<byte[]> uniqueIds;
+
+	public Service() throws MalformedURLException, UnknownHostException,
+			IOException, ParseException {
 		this.currentState = GossipState.WAIT_FOR_INIT;
+		this.timer = new Timer(true);
+
+		statsData = new ConcurrentHashMap<String, JSONObject>();
+		uniqueIds = new Vector<byte[]>();
+		
+		this.gossipTimerTask = new GossipTimerTask(hostPorts, statsData, uniqueIds);
+
+		this.setState(GossipState.ACTIVE_GOSSIP);
 	}
-	
-    public void run(final String host, final String port) throws Exception
-    {	
-    	if(!this.isStop()) {
-    		return;
-    	}
-		this.timer = new Timer(true); //daemon thread
-		this.timer.scheduleAtFixedRate(new TimerTask() {
-    		public void run() {
-    			try {
-    				String dataString = new JSONObject(getData()).toJSONString();
-					client.send(host, port, dataString);
-				} catch (Exception e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-    		}
-    	}, 0, 30000);   
-		this.isStop = false;
-    }
-    
-    public void stop() {
-    	this.isStop = true;
-    	this.timer.cancel();    	
-    }
-    
-    public void terminate() {
-    	this.stop();   
-    	client.closeSocket();
-    }
-    
-    public boolean isStop() {
-    	return this.isStop;
-    }
-    
-    public JSONObject request(String url, String method) throws MalformedURLException, IOException, ParseException {
-		HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
-		connection.setRequestMethod(method);
-		if(connection.getResponseCode() == 200) {
-			BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-			String line;
-			if((line = in.readLine()) != null) {
-    			return (JSONObject) (new JSONParser()).parse(line);
+
+	public void terminate() {
+		this.setState(GossipState.STOPPED);
+	}
+
+	public void start() {
+		this.setState(GossipState.WAIT_FOR_INIT);
+	}
+
+	public void stop() {
+		this.setState(GossipState.STOPPED);
+	}
+
+	@SuppressWarnings("unchecked")
+	public void processMessage(byte[] msg) {
+		// Ignore the message
+		if (this.currentState == GossipState.STOPPED) {
+			return;
+		}
+
+		// Transition into active state, still respond to this message
+		if (this.currentState == GossipState.WAIT_FOR_INIT) {
+			this.setState(GossipState.ACTIVE_GOSSIP);
+		}
+		
+		// Check for a reply to a message we initiated
+		ByteBuffer byteBuffer = ByteBuffer.wrap(msg);
+		byte[] uniqueID = new byte[16];
+		byteBuffer.get(uniqueID);
+		int uniqueIdIndex = 0;
+		for (uniqueIdIndex = 0; uniqueIdIndex < uniqueIds.size(); uniqueIdIndex++) {
+			if (Arrays.equals(uniqueID, uniqueIds.get(uniqueIdIndex))) {
+				uniqueIds.remove(uniqueIdIndex);
+				return;
 			}
 		}
-		return null;
+		
+		// Reply with our current data
+		
+		// TODO: Get ip and port from uniqueId
+		// and send back current statsData
+		
+		// Merge received data with own data
+		byte[] actualMsgBytes = new byte[byteBuffer.remaining()];
+		byteBuffer.get(actualMsgBytes);
+		String actualMsg = "";
+		try {
+			actualMsg = new String(actualMsgBytes, "UTF-8").trim();
+		} catch (UnsupportedEncodingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		JSONObject receivedJSONObject = (JSONObject) JSONValue.parse(actualMsg);
+		
+		Set<String> keys = receivedJSONObject.keySet();
+		for(String key : keys)
+		{
+			JSONObject obj = (JSONObject) receivedJSONObject.get(key);
+			statsData.putIfAbsent(key, obj);
+		}
 	}
-    
-    @SuppressWarnings("unchecked")
-	public JSONObject getData() throws IOException, java.text.ParseException {
-    	statsData = new ConcurrentHashMap<String, ConcurrentHashMap<String, String>>();
-    	ConcurrentHashMap<String, String> currentData = new ConcurrentHashMap<String, String>();
-		
-    	
-    	currentData.put("hostname", SystemCmd.getHostName());
-    	currentData.put("systemUptime", SystemCmd.uptime());
-    	currentData.put("deploySize", String.valueOf(SystemCmd.getFileSize("filename")));
-    	currentData.put("spaceAvailable", String.valueOf(SystemCmd.getDiskAvailableSize()));
-    	currentData.put("averageLoads", SystemCmd.getLoad());
-    	long millis = ManagementFactory.getRuntimeMXBean().getUptime();
-    	long days = TimeUnit.MILLISECONDS.toDays(millis);
-    	long hours = TimeUnit.MILLISECONDS.toHours(millis) - TimeUnit.DAYS.toHours(days);
-    	long minutes = TimeUnit.MILLISECONDS.toMinutes(millis) - TimeUnit.DAYS.toMinutes(days) - TimeUnit.HOURS.toMinutes(hours);
-    	currentData.put("serviceUptime", days + " days " + hours + " hours " + minutes + " minutes");
-    	currentData.put("latitude", String.valueOf(loc.get("lat")));
-    	currentData.put("longitude", String.valueOf(loc.get("lon")));
-    	currentData.put("city", String.valueOf(loc.get("city")));
-    	currentData.put("country", String.valueOf(loc.get("country")));
-    	currentData.put("isp", String.valueOf(loc.get("isp"))); 
-    	
-		statsData.put(SystemCmd.getHostName(), currentData);
-		
-		// Temporary workaround - dont need this once node server can understand hostname: statsdata KV store
-		JSONObject tmp = new JSONObject(currentData);
-		return tmp;
-    }
+
+	private void setState(GossipState state) {
+		if (this.currentState == state) {
+			return;
+		}
+
+		this.currentState = state;
+		if (this.currentState == GossipState.ACTIVE_GOSSIP) {
+			startGossipTask();
+		} else {
+			stopGossipTask();
+		}
+	}
+
+	private void startGossipTask() {
+		statsData.clear();
+		ServerInfo myInfo = new ServerInfo();
+		statsData.put(String.valueOf(myInfo.get("hostname")), myInfo);
+		this.timer.scheduleAtFixedRate(gossipTimerTask, 0, GOSSIP_DELAY_MS);
+	}
+
+	private void stopGossipTask() {
+		this.timer.cancel();
+	}
 }
