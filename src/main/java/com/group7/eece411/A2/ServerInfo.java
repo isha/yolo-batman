@@ -13,17 +13,7 @@ public class ServerInfo extends JSONObject {
 	 * 
 	 */
 	private static final long serialVersionUID = 5065919895932350647L;
-	public String hostName;
-	public String uptime;
-	public String deploySize;
-	public String spaceAvailable;
-	public String averageLoads;
-	public String serviceUptime;
-	public String latitude;
-	public String longitude;
-	public String city;
-	public String country;
-	public String isp;
+
 	
 	public ServerInfo()
 	{
