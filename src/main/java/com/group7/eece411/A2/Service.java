@@ -112,6 +112,11 @@ public class Service {
 			JSONObject obj = (JSONObject) receivedJSONObject.get(key);
 			statsData.putIfAbsent(key, obj);
 		}
+		
+		// Check if data complete
+		if (statsData.size() == hostPorts.length && this.currentState == GossipState.ACTIVE_GOSSIP) {
+			this.setState(GossipState.PASSIVE_GOSSIP);
+		}
 	}
 
 	private void setState(GossipState state) {
@@ -122,7 +127,7 @@ public class Service {
 		this.currentState = state;
 		if (this.currentState == GossipState.ACTIVE_GOSSIP) {
 			startGossipTask();
-		} else {
+		} else if (this.currentState == GossipState.PASSIVE_GOSSIP) {
 			stopGossipTask();
 		}
 	}
