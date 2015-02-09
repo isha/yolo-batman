@@ -35,7 +35,7 @@ public class Service {
 
 	public Service() throws MalformedURLException, UnknownHostException,
 			IOException, ParseException {
-		this.currentState = GossipState.WAIT_FOR_INIT;
+		this.setState(GossipState.WAIT_FOR_INIT);
 		this.timer = new Timer(true);
 
 		statsData = new ConcurrentHashMap<String, JSONObject>();
@@ -43,6 +43,7 @@ public class Service {
 		
 		this.gossipTimerTask = new GossipTimerTask(hostPorts, statsData, uniqueIds);
 
+		// Start gossiping for now, but eventually need to wait for message before starting 
 		this.setState(GossipState.ACTIVE_GOSSIP);
 	}
 
