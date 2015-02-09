@@ -75,18 +75,23 @@ public class Service {
 		ByteBuffer byteBuffer = ByteBuffer.wrap(msg);
 		byte[] uniqueID = new byte[16];
 		byteBuffer.get(uniqueID);
+		boolean isReply = false;
 		int uniqueIdIndex = 0;
 		for (uniqueIdIndex = 0; uniqueIdIndex < uniqueIds.size(); uniqueIdIndex++) {
 			if (Arrays.equals(uniqueID, uniqueIds.get(uniqueIdIndex))) {
 				uniqueIds.remove(uniqueIdIndex);
-				return;
+				isReply = true;
+				break;
 			}
 		}
 		
-		// Reply with our current data
-		
+		if (!isReply) {
 		// TODO: Get ip and port from uniqueId
-		// and send back current statsData
+		
+		
+		// Reply with our current data
+		}
+		
 		
 		// Merge received data with own data
 		byte[] actualMsgBytes = new byte[byteBuffer.remaining()];
