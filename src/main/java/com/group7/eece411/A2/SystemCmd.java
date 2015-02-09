@@ -15,11 +15,12 @@ import java.util.regex.Pattern;
 
 public class SystemCmd {
 
+	public final static String OS = System.getProperty("os.name").toLowerCase();
+	
 	public static String uptime() throws IOException, ParseException {
-		String os = System.getProperty("os.name").toLowerCase();
 		BufferedReader in;
 		String line;
-		if(os.contains("win")) { //Windows
+		if(SystemCmd.OS.contains("win")) { //Windows
 			in = getBufferedReaderFromCmd("net stats srv");
 			while((line = in.readLine()) != null) {
 				if(line.startsWith("Statistics since")) {
@@ -62,10 +63,9 @@ public class SystemCmd {
 	}
 	
 	public static String getLoad() throws IOException {
-		String os = System.getProperty("os.name").toLowerCase();
 		BufferedReader in;
 		String line;
-		if(!os.contains("win")) {
+		if(!SystemCmd.OS.contains("win")) {
 			in = getBufferedReaderFromCmd("uptime");
 			if((line = in.readLine()) != null) {
 				return line.substring(line.indexOf("load average: ")+13);			
@@ -82,5 +82,24 @@ public class SystemCmd {
 	private static BufferedReader getBufferedReaderFromCmd(String cmd) throws IOException {
 		InputStreamReader isr = new InputStreamReader(Runtime.getRuntime().exec(cmd).getInputStream());
 		return new BufferedReader(isr);		
+	}
+	
+	public static boolean isReachable(String host) throws IOException {
+		BufferedReader in;	
+		String line = null;
+		Pattern p = Pattern.compile("(\\d+)% (\\bpacket )?loss");
+		if(!SystemCmd.OS.contains("win")) {
+			in = getBufferedReaderFromCmd("ping -c 2 " + host);
+		} else {
+			in = getBufferedReaderFromCmd("ping -n 2 " + host);
+		}
+		while ((line = in.readLine()) != null)
+	    {
+			Matcher matcher = p.matcher(line);
+			while (matcher.find()) {
+			  return !matcher.group(1).equals("100");
+			}
+	    }
+		return false;
 	}
 }
