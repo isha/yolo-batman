@@ -114,7 +114,7 @@ public class Service {
 
 			// Reply with our current data
 			gossipTimerTask.sendDataTo(addr.getHostName(),
-					String.valueOf(7777), false);
+					String.valueOf(Application.DEFAULT_PORT), false);
 		}
 
 		// Merge received data with own data
@@ -191,7 +191,7 @@ public class Service {
 		try (Scanner scanner = new Scanner(file)) {
 			while (scanner.hasNextLine()) {
 				String line = scanner.nextLine();
-				HostPort hp = new HostPort(line, "7777");
+				HostPort hp = new HostPort(line, String.valueOf(Application.DEFAULT_PORT));
 				hostPorts.add(hp);
 			}
 			scanner.close();
