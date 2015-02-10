@@ -26,7 +26,7 @@ import org.json.simple.parser.ParseException;
  *
  */
 public class Service {
-	private static int GOSSIP_DELAY_MS = 1000;
+	private static int GOSSIP_DELAY_MS = 100;
 	private static int EXIT_PASSIVE_GOSSIP_STATE_DELAY_MS = 5000;
 	private static int DEFAULT_SEND_PORT = 41171;
 
@@ -42,8 +42,7 @@ public class Service {
 	private GossipTimerTask gossipTimerTask;
 	private ConcurrentHashMap<Date, ConcurrentHashMap<String, byte[]>> uniqueIds;
 
-	public Service() throws MalformedURLException, UnknownHostException,
-			IOException, ParseException {
+	public Service() throws MalformedURLException, IOException, ParseException {
 		this.currentState = GossipState.WAIT_FOR_INIT;
 		this.timer = new Timer(true);
 
@@ -51,7 +50,6 @@ public class Service {
 		this.uniqueIds = new ConcurrentHashMap<Date, ConcurrentHashMap<String, byte[]>>();
 		this.hostPorts = getHostPorts();
 		this.endPassiveStateTimer = new Timer();
-		this.gossipTimerTask = new GossipTimerTask(hostPorts, statsData, uniqueIds, this);
 	}
 
 	public void start() throws IllegalArgumentException, IOException {
@@ -161,7 +159,6 @@ public class Service {
 			System.out.println(state);
 			stopGossipTask();
 			scheduleEndPassiveStateTimer();
-			gossipTimerTask.sendDataTo("127.0.0.1", String.valueOf(DEFAULT_SEND_PORT), false);
 			this.currentState = state;
 		}
 		
@@ -172,6 +169,7 @@ public class Service {
 			public void run() {
 				try {
 					setState(GossipState.WAIT_FOR_INIT);
+					gossipTimerTask.sendDataTo("127.0.0.1", String.valueOf(DEFAULT_SEND_PORT), false);
 					endPassiveStateTimer.cancel();
 				} catch (Exception e) {
 					// TODO Send exception to monitor server
@@ -180,7 +178,8 @@ public class Service {
 		}, EXIT_PASSIVE_GOSSIP_STATE_DELAY_MS);
 	}
 
-	private void startGossipTask() {
+	private void startGossipTask() throws UnknownHostException {
+		this.gossipTimerTask = new GossipTimerTask(hostPorts, statsData, uniqueIds, this);
 		statsData.clear();
 		ServerInfo myInfo = new ServerInfo();
 		statsData.put(String.valueOf(myInfo.get("hostname")), myInfo);
