@@ -73,6 +73,15 @@ public class GossipTimerTask extends TimerTask {
 		System.out.println("Run Gossip Task");
 		boolean isRepeated = false;
 		Vector<HostPort> activeHostPorts = getActiveHostPorts();
+		if(activeHostPorts.size() <= 0) {
+			try {
+				this.serv.setState(GossipState.PASSIVE_GOSSIP);
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			return;
+		}
 		int randomIndex = random.nextInt(activeHostPorts.size());
 		final HostPort hostPort = activeHostPorts.get(randomIndex);
 		synchronized (uniqueIds) {

@@ -49,7 +49,6 @@ public class Service {
 		this.statsData = new ConcurrentHashMap<String, JSONObject>();
 		this.uniqueIds = new ConcurrentHashMap<Date, ConcurrentHashMap<String, byte[]>>();
 		this.hostPorts = getHostPorts();
-		this.endPassiveStateTimer = new Timer();
 	}
 
 	public void start() throws IllegalArgumentException, IOException {
@@ -145,7 +144,9 @@ public class Service {
 		if(this.currentState != GossipState.STOPPED && state == GossipState.STOPPED) {
 			System.out.println(state);
 			stopGossipTask();
-			this.endPassiveStateTimer.cancel();
+			if(this.endPassiveStateTimer != null) {
+				this.endPassiveStateTimer.cancel();
+			}
 			this.currentState = state;
 		} else if ((this.currentState == GossipState.STOPPED || this.currentState == GossipState.PASSIVE_GOSSIP) 
 				&& state == GossipState.WAIT_FOR_INIT) {
@@ -165,6 +166,7 @@ public class Service {
 	}
 
 	private void scheduleEndPassiveStateTimer() {
+		this.endPassiveStateTimer = new Timer();
 		this.endPassiveStateTimer.schedule(new TimerTask() {
 			public void run() {
 				try {
@@ -179,14 +181,16 @@ public class Service {
 	}
 
 	private void startGossipTask() throws UnknownHostException {
-		this.gossipTimerTask = new GossipTimerTask(hostPorts, statsData, uniqueIds, this);
+		this.timer = new Timer(true);
 		statsData.clear();
+		gossipTimerTask = new GossipTimerTask(hostPorts, statsData, uniqueIds, this);
 		ServerInfo myInfo = new ServerInfo();
 		statsData.put(String.valueOf(myInfo.get("hostname")), myInfo);
 		this.timer.scheduleAtFixedRate(gossipTimerTask, 0, GOSSIP_DELAY_MS);
 	}
 
 	private void stopGossipTask() {
+		this.gossipTimerTask.cancel();
 		this.timer.cancel();
 	}
 
