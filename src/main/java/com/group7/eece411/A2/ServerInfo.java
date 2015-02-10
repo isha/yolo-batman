@@ -1,8 +1,10 @@
 package com.group7.eece411.A2;
 
+import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.text.ParseException;
 import java.util.concurrent.TimeUnit;
 
 import org.json.simple.JSONObject;
@@ -18,11 +20,19 @@ public class ServerInfo extends JSONObject {
 	public ServerInfo()
 	{
 		super();
-		update();
+		try {
+			update();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (ParseException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 	
 	@SuppressWarnings("unchecked")
-	public void update()
+	public void update() throws IOException, ParseException
 	{		
 		put("hostname", SystemCmd.getHostName());
     	put("systemUptime", SystemCmd.uptime());
