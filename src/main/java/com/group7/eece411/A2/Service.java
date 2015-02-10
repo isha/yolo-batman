@@ -1,6 +1,7 @@
 package com.group7.eece411.A2;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
@@ -54,24 +55,25 @@ public class Service {
 				uniqueIds);
 	}
 
-	public void start() {
+	public void start() throws IllegalArgumentException, IOException {
 		this.setState(GossipState.WAIT_FOR_INIT);
 	}
 
-	public void startGossiping() {
+	public void startGossiping() throws IllegalArgumentException, IOException {
 		this.setState(GossipState.ACTIVE_GOSSIP);
 	}
 
-	public void stop() {
+	public void stop() throws IllegalArgumentException, IOException {
 		this.setState(GossipState.STOPPED);
 	}
 
-	public void terminate() {
+	public void terminate() throws IllegalArgumentException, IOException {
 		this.setState(GossipState.STOPPED);
 	}
 
 	@SuppressWarnings("unchecked")
-	public void processMessage(byte[] msg) {
+	public void processMessage(byte[] msg) throws IllegalArgumentException,
+			IOException {
 		// Ignore the message
 		if (this.currentState == GossipState.STOPPED) {
 			return;
@@ -103,14 +105,8 @@ public class Service {
 			byte[] ipAddr = new byte[] { uniqueID[0], uniqueID[1], uniqueID[2],
 					uniqueID[3] };
 			InetAddress addr = null;
-			try {
-				addr = InetAddress.getByAddress(ipAddr);
-				System.out
-						.println("Parsed ip address from uniqueHeader" + addr);
-			} catch (UnknownHostException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+			addr = InetAddress.getByAddress(ipAddr);
+			System.out.println("Parsed ip address from uniqueHeader" + addr);
 
 			// Reply with our current data
 			gossipTimerTask.sendDataTo(addr.getHostName(),
@@ -121,12 +117,7 @@ public class Service {
 		byte[] actualMsgBytes = new byte[byteBuffer.remaining()];
 		byteBuffer.get(actualMsgBytes);
 		String actualMsg = "";
-		try {
-			actualMsg = new String(actualMsgBytes, "UTF-8").trim();
-		} catch (UnsupportedEncodingException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		actualMsg = new String(actualMsgBytes, "UTF-8").trim();
 
 		JSONObject receivedJSONObject = (JSONObject) JSONValue.parse(actualMsg);
 
@@ -146,7 +137,8 @@ public class Service {
 		scheduleEndPassiveStateTimer();
 	}
 
-	private void setState(GossipState state) {
+	private void setState(GossipState state) throws IllegalArgumentException,
+			IOException {
 		if (this.currentState == state) {
 			return;
 		}
@@ -164,7 +156,11 @@ public class Service {
 	private void scheduleEndPassiveStateTimer() {
 		this.endPassiveStateTimer.schedule(new TimerTask() {
 			public void run() {
-				setState(GossipState.WAIT_FOR_INIT);
+				try {
+					setState(GossipState.WAIT_FOR_INIT);
+				} catch (Exception e) {
+					// TODO Send exception to monitor server
+				}
 			}
 		}, EXIT_PASSIVE_GOSSIP_STATE_DELAY_MS);
 	}
@@ -180,7 +176,7 @@ public class Service {
 		this.timer.cancel();
 	}
 
-	private ArrayList<HostPort> getHostPorts() {
+	private ArrayList<HostPort> getHostPorts() throws FileNotFoundException {
 		hostPorts = new ArrayList<HostPort>();
 
 		// Get file from resources folder
@@ -188,16 +184,14 @@ public class Service {
 		File file = new File(classLoader.getResource("file/hosts.txt")
 				.getFile());
 
-		try (Scanner scanner = new Scanner(file)) {
-			while (scanner.hasNextLine()) {
-				String line = scanner.nextLine();
-				HostPort hp = new HostPort(line, String.valueOf(Application.DEFAULT_PORT));
-				hostPorts.add(hp);
-			}
-			scanner.close();
-		} catch (IOException e) {
-			e.printStackTrace();
+		Scanner scanner = new Scanner(file);
+		while (scanner.hasNextLine()) {
+			String line = scanner.nextLine();
+			HostPort hp = new HostPort(line,
+					String.valueOf(Application.DEFAULT_PORT));
+			hostPorts.add(hp);
 		}
+		scanner.close();
 
 		return hostPorts;
 	}

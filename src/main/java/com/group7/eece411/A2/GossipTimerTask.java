@@ -35,27 +35,21 @@ public class GossipTimerTask extends TimerTask {
 		this.uniqueIds = uniqueIds;
 	}
 
-	public void sendDataTo(String hostName, String port, boolean storeUniqueId) {
+	public void sendDataTo(String hostName, String port, boolean storeUniqueId)
+			throws IllegalArgumentException, IOException {
 		byte[] uniqueId;
-		try {
-			String obj = JSONObject.toJSONString(statsData);
-			uniqueId = client.send(hostName, port, obj);
-			if (storeUniqueId) {
-				synchronized (uniqueIds) {
-					uniqueIds.add(uniqueId);
-				}
+		String obj = JSONObject.toJSONString(statsData);
+		uniqueId = client.send(hostName, port, obj);
+		if (storeUniqueId) {
+			synchronized (uniqueIds) {
+				uniqueIds.add(uniqueId);
 			}
-		} catch (IllegalArgumentException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 		}
 
 	}
 
-	public void sendDataTo(String hostName, String port) {
+	public void sendDataTo(String hostName, String port)
+			throws IllegalArgumentException, IOException {
 		sendDataTo(hostName, port, true);
 	}
 
@@ -76,10 +70,10 @@ public class GossipTimerTask extends TimerTask {
 				} else {
 					sendDataTo(hostPort.hostName, hostPort.port);
 				}
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+			} catch (Exception e) {
+				// TODO Send to monitor server
 			}
+
 		}
 	}
 
