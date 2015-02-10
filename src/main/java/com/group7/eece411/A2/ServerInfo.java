@@ -33,7 +33,8 @@ public class ServerInfo extends JSONObject {
 	
 	@SuppressWarnings("unchecked")
 	public void update() throws IOException, ParseException
-	{		
+	{
+		put("online", true);
 		put("hostname", SystemCmd.getHostName());
     	put("systemUptime", SystemCmd.uptime());
     	put("deploySize", String.valueOf(SystemCmd.getFileSize("filename")));

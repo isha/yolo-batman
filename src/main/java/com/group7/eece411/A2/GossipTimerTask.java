@@ -23,7 +23,7 @@ public class GossipTimerTask extends TimerTask {
 	private static int PORT = 5628;
 	private ArrayList<HostPort> hostPorts;
 	private UDPClient client;
-	private Vector<byte[]> uniqueIds; 
+	private Vector<byte[]> uniqueIds;
 	private ConcurrentHashMap<String, JSONObject> statsData;
 
 	public GossipTimerTask(ArrayList<HostPort> hostPorts,
@@ -39,10 +39,11 @@ public class GossipTimerTask extends TimerTask {
 		byte[] uniqueId;
 		try {
 			String obj = JSONObject.toJSONString(statsData);
-			System.out.println(obj);
 			uniqueId = client.send(hostName, port, obj);
 			if (storeUniqueId) {
-				uniqueIds.add(uniqueId);
+				synchronized (uniqueIds) {
+					uniqueIds.add(uniqueId);
+				}
 			}
 		} catch (IllegalArgumentException e) {
 			// TODO Auto-generated catch block
@@ -51,13 +52,14 @@ public class GossipTimerTask extends TimerTask {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
+
 	}
 
 	public void sendDataTo(String hostName, String port) {
 		sendDataTo(hostName, port, true);
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
 	public void run() {
 		Random random = new Random();
@@ -65,8 +67,20 @@ public class GossipTimerTask extends TimerTask {
 		for (int i = 0; i < NUM_TO_GOSSIP_WITH; i++) {
 			int randomIndex = random.nextInt(hostPorts.size());
 			HostPort hostPort = hostPorts.get(randomIndex);
-			sendDataTo(hostPort.hostName, hostPort.port);
+
+			try {
+				if (SystemCmd.isReachable(hostPort.hostName) == false) {
+					JSONObject offlineData = new JSONObject();
+					offlineData.put("online", false);
+					statsData.putIfAbsent(hostPort.hostName, offlineData);
+				} else {
+					sendDataTo(hostPort.hostName, hostPort.port);
+				}
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 	}
-	
+
 }

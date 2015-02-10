@@ -2,11 +2,12 @@ package com.group7.eece411.A2;
 
 public class Application {
 
-	public static int DEFAULT_PORT = 7777;
+	public static int DEFAULT_PORT = 41170;
 
-	private static String STOP_COMMAND = "stop monitor";
-	private static String START_COMMAND = "start monitor";
-	private static String EXIT_COMMAND = "exit service";
+	private static String STOP_COMMAND = "stop";
+	private static String START_COMMAND = "start";
+	private static String EXIT_COMMAND = "exit";
+	private static String ACTIVE_COMMAND = "active";
 
 	public static void main(String[] args) throws Exception {
 		System.setProperty("java.net.preferIPv4Stack", "true");
@@ -19,15 +20,14 @@ public class Application {
 		do {
 			byte[] receivedBytes = client.receive();
 			msg = (new String(receivedBytes, "UTF-8")).trim();
-			System.out.println("Received : " + msg);
 
 			if (msg.equalsIgnoreCase(STOP_COMMAND)) {
 				gossipService.stop();
 			} else if (msg.equalsIgnoreCase(START_COMMAND)) {
 				gossipService.start();
-			}
-			else
-			{
+			} else if (msg.equalsIgnoreCase(ACTIVE_COMMAND)) {
+				gossipService.startGossiping();
+			} else {
 				gossipService.processMessage(receivedBytes);
 			}
 		} while (!msg.equalsIgnoreCase(EXIT_COMMAND));
