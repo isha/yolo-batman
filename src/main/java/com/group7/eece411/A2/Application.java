@@ -1,34 +1,38 @@
 package com.group7.eece411.A2;
 
 public class Application {
-	
+
+	public static int DEFAULT_PORT = 7777;
+
+	private static String STOP_COMMAND = "stop monitor";
+	private static String START_COMMAND = "start monitor";
+	private static String EXIT_COMMAND = "exit service";
+
 	public static void main(String[] args) throws Exception {
 		System.setProperty("java.net.preferIPv4Stack", "true");
-		UDPClient client = new UDPClient(7777);
-		client.setTimeout(0); 	
+		UDPClient client = new UDPClient(DEFAULT_PORT);
+		client.setTimeout(0);
+
+		Service gossipService = new Service();
+
 		String msg;
-		
-		/* IP address of AWS server running monitor_server */
-		// String monitorServer = "54.68.197.12";
-		/* Localhost (make sure local monitor_server is listening for UDP messages on port 5700 */
-		String monitorServer = "127.0.0.1";
-		
-		String monitorPort = "5700";
-		Service monitorService = new Service();
-		monitorService.run(monitorServer, monitorPort);
-
 		do {
-    		msg = (new String(client.receive(), "UTF-8")).trim();
-    		System.out.println("Received : "+msg);
+			byte[] receivedBytes = client.receive();
+			msg = (new String(receivedBytes, "UTF-8")).trim();
+			System.out.println("Received : " + msg);
 
-    		if(msg.equalsIgnoreCase("stop monitor")) {
-    			monitorService.stop();
-    		} else if(msg.equalsIgnoreCase("start monitor")) {
-    			monitorService.run(monitorServer, monitorPort);
-    		}
-    	} while(!msg.equalsIgnoreCase("exit service"));
-		
-		monitorService.terminate();
+			if (msg.equalsIgnoreCase(STOP_COMMAND)) {
+				gossipService.stop();
+			} else if (msg.equalsIgnoreCase(START_COMMAND)) {
+				gossipService.start();
+			}
+			else
+			{
+				gossipService.processMessage(receivedBytes);
+			}
+		} while (!msg.equalsIgnoreCase(EXIT_COMMAND));
+
+		gossipService.terminate();
 	}
 
 }
