@@ -33,9 +33,11 @@ public class GossipTimerTask extends TimerTask {
 	private int count;
 	private Service serv;
 
-	public GossipTimerTask(ArrayList<HostPort> hostPorts,
+	public GossipTimerTask(
+			ArrayList<HostPort> hostPorts,
 			ConcurrentHashMap<String, JSONObject> statsData,
-			ConcurrentHashMap<Date, ConcurrentHashMap<String, byte[]>> uniqueIds, Service ref) throws UnknownHostException {
+			ConcurrentHashMap<Date, ConcurrentHashMap<String, byte[]>> uniqueIds,
+			Service ref) throws UnknownHostException {
 		this.hostPorts = hostPorts;
 		this.client = new UDPClient(PORT);
 		this.statsData = statsData;
@@ -70,14 +72,15 @@ public class GossipTimerTask extends TimerTask {
 		Random random = new Random();
 		System.out.println("Run Gossip Task");
 		boolean isRepeated = false;
-		int randomIndex = random.nextInt(hostPorts.size());
-		final HostPort hostPort = hostPorts.get(randomIndex);
+		Vector<HostPort> activeHostPorts = getActiveHostPorts();
+		int randomIndex = random.nextInt(activeHostPorts.size());
+		final HostPort hostPort = activeHostPorts.get(randomIndex);
 		synchronized (uniqueIds) {
 			for (Date key : uniqueIds.keySet()) {
-				if(uniqueIds.get(key).containsKey(hostPort.hostName)) {
+				if (uniqueIds.get(key).containsKey(hostPort.hostName)) {
 					isRepeated = true;
 				}
-				if(System.currentTimeMillis() >= key.getTime() + 10000) {
+				if (System.currentTimeMillis() >= key.getTime() + 10000) {
 					for (String hostname : uniqueIds.get(key).keySet()) {
 						JSONObject offlineData = new JSONObject();
 						offlineData.put("ping", false);
@@ -100,7 +103,6 @@ public class GossipTimerTask extends TimerTask {
 		}
 		System.out.println("unique size : "+uniqueIds.size());
 		System.out.println("statData size : "+statsData.size());
-		if(!statsData.containsKey(hostPort.hostName)) {			
 			System.out.println("Sending to : " + hostPort.hostName);
 			try {
 				if (SystemCmd.isReachable(hostPort.hostName) == false) {
@@ -117,7 +119,18 @@ public class GossipTimerTask extends TimerTask {
 			} catch (Exception e) {
 				// TODO Send to monitor server
 			}
+	}
+
+	private Vector<HostPort> getActiveHostPorts() {
+		Vector<HostPort> activeHostPorts = new Vector<HostPort>();
+		for (HostPort hostPort : hostPorts) {
+			JSONObject serverData = statsData.get(hostPort.hostName);
+			if (serverData == null)
+			{
+				activeHostPorts.add(hostPort);
+			}
 		}
+		return activeHostPorts;
 	}
 
 }
