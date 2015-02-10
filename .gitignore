@@ -47,3 +47,4 @@ local.properties
 
 # Maven build stuff
 target/*
+/target/

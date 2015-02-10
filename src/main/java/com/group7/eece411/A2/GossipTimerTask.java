@@ -4,7 +4,10 @@ import java.io.IOException;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
 import java.util.Random;
+import java.util.Timer;
 import java.util.TimerTask;
 import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
@@ -16,60 +19,95 @@ import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import org.omg.PortableServer.REQUEST_PROCESSING_POLICY_ID;
 
+import com.group7.eece411.A2.Service.GossipState;
+
 public class GossipTimerTask extends TimerTask {
 
-	private static int NUM_TO_GOSSIP_WITH = 1;
+	private static int NUM_TO_GOSSIP_WITH = 10;
 
 	private static int PORT = 5628;
 	private ArrayList<HostPort> hostPorts;
 	private UDPClient client;
-	private Vector<byte[]> uniqueIds;
+	private ConcurrentHashMap<Date, ConcurrentHashMap<String, byte[]>> uniqueIds;
 	private ConcurrentHashMap<String, JSONObject> statsData;
+	private int count;
+	private Service serv;
 
 	public GossipTimerTask(ArrayList<HostPort> hostPorts,
 			ConcurrentHashMap<String, JSONObject> statsData,
-			Vector<byte[]> uniqueIds) throws UnknownHostException {
+			ConcurrentHashMap<Date, ConcurrentHashMap<String, byte[]>> uniqueIds, Service ref) throws UnknownHostException {
 		this.hostPorts = hostPorts;
 		this.client = new UDPClient(PORT);
 		this.statsData = statsData;
 		this.uniqueIds = uniqueIds;
+		this.count = 0;
+		this.serv = ref;
 	}
 
-	public void sendDataTo(String hostName, String port, boolean storeUniqueId)
+	public byte[] sendDataTo(String hostName, String port, boolean storeUniqueId)
 			throws IllegalArgumentException, IOException {
 		byte[] uniqueId;
 		String obj = JSONObject.toJSONString(statsData);
 		uniqueId = client.send(hostName, port, obj);
 		if (storeUniqueId) {
+			ConcurrentHashMap<String, byte[]> temp = new ConcurrentHashMap<String, byte[]>();
+			temp.put(hostName, uniqueId);
 			synchronized (uniqueIds) {
-				uniqueIds.add(uniqueId);
+				uniqueIds.put(new Date(System.currentTimeMillis()), temp);
 			}
 		}
-
+		return uniqueId;
 	}
 
-	public void sendDataTo(String hostName, String port)
+	public byte[] sendDataTo(String hostName, String port)
 			throws IllegalArgumentException, IOException {
-		sendDataTo(hostName, port, true);
+		return sendDataTo(hostName, port, true);
 	}
 
 	@SuppressWarnings("unchecked")
 	@Override
 	public void run() {
 		Random random = new Random();
-
-		for (int i = 0; i < NUM_TO_GOSSIP_WITH; i++) {
+		System.out.println("Run Gossip Task");
+		synchronized (uniqueIds) {
+			for (Date key : uniqueIds.keySet()) {
+				if(System.currentTimeMillis() >= key.getTime() + 10000) {
+					for (String hostname : uniqueIds.get(key).keySet()) {
+						JSONObject offlineData = new JSONObject();
+						offlineData.put("ping", false);
+						statsData.putIfAbsent(hostname, offlineData);
+						System.out.println("no respond");
+						System.out.println(statsData.toString());
+						uniqueIds.get(key).remove(hostname);
+					}
+					uniqueIds.remove(key);
+					if (statsData.size() == hostPorts.size()) {
+						try {
+							this.serv.setState(GossipState.PASSIVE_GOSSIP);
+						} catch (Exception e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+					}
+				}
+			}
+		}
+		if(count < NUM_TO_GOSSIP_WITH) {
+			count++;
 			int randomIndex = random.nextInt(hostPorts.size());
-			HostPort hostPort = hostPorts.get(randomIndex);
-
+			final HostPort hostPort = hostPorts.get(randomIndex);
+			System.out.println("Sending to : " + hostPort.hostName);
 			try {
 				if (SystemCmd.isReachable(hostPort.hostName) == false) {
-					JSONObject offlineData = new JSONObject();
-					offlineData.put("online", false);
-					statsData.putIfAbsent(hostPort.hostName, offlineData);
+					synchronized(statsData) {
+						JSONObject offlineData = new JSONObject();
+						offlineData.put("ping", false);
+						statsData.putIfAbsent(hostPort.hostName, offlineData);
+					}
 				} else {
 					sendDataTo(hostPort.hostName, hostPort.port);
 				}
+				System.out.println(statsData.toString());
 			} catch (Exception e) {
 				// TODO Send to monitor server
 			}

@@ -34,7 +34,8 @@ public class ServerInfo extends JSONObject {
 	@SuppressWarnings("unchecked")
 	public void update() throws IOException, ParseException
 	{
-		put("online", true);
+		put("ping", true);
+		put("ssh", true);
 		put("hostname", SystemCmd.getHostName());
     	put("systemUptime", SystemCmd.uptime());
     	put("deploySize", String.valueOf(SystemCmd.getFileSize("filename")));
@@ -55,14 +56,8 @@ public class ServerInfo extends JSONObject {
     	put("isp", String.valueOf(location.get("isp"))); 
 	}
 	
-	private String getLocalHost()
+	private String getLocalHost() throws UnknownHostException
 	{
-		try {
 		return InetAddress.getLocalHost().getHostAddress();
-		} catch (UnknownHostException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		return "";
 	}
 }
