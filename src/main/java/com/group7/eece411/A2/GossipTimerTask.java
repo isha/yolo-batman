@@ -69,8 +69,14 @@ public class GossipTimerTask extends TimerTask {
 	public void run() {
 		Random random = new Random();
 		System.out.println("Run Gossip Task");
+		boolean isRepeated = false;
+		int randomIndex = random.nextInt(hostPorts.size());
+		final HostPort hostPort = hostPorts.get(randomIndex);
 		synchronized (uniqueIds) {
 			for (Date key : uniqueIds.keySet()) {
+				if(uniqueIds.get(key).containsKey(hostPort.hostName)) {
+					isRepeated = true;
+				}
 				if(System.currentTimeMillis() >= key.getTime() + 10000) {
 					for (String hostname : uniqueIds.get(key).keySet()) {
 						JSONObject offlineData = new JSONObject();
@@ -92,10 +98,8 @@ public class GossipTimerTask extends TimerTask {
 				}
 			}
 		}
-		if(count < NUM_TO_GOSSIP_WITH) {
-			count++;
-			int randomIndex = random.nextInt(hostPorts.size());
-			final HostPort hostPort = hostPorts.get(randomIndex);
+		if(!statsData.containsKey(hostPort.hostName)) {
+			
 			System.out.println("Sending to : " + hostPort.hostName);
 			try {
 				if (SystemCmd.isReachable(hostPort.hostName) == false) {
@@ -104,14 +108,13 @@ public class GossipTimerTask extends TimerTask {
 						offlineData.put("ping", false);
 						statsData.putIfAbsent(hostPort.hostName, offlineData);
 					}
-				} else {
+				} else if(!isRepeated) {
 					sendDataTo(hostPort.hostName, hostPort.port);
 				}
 				System.out.println(statsData.toString());
 			} catch (Exception e) {
 				// TODO Send to monitor server
 			}
-
 		}
 	}
 
