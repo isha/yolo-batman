@@ -2,6 +2,7 @@ package com.group7.eece411.A2;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
@@ -85,11 +86,19 @@ public class Service {
 			}
 		}
 		
-		if (!isReply) {
-		// TODO: Get ip and port from uniqueId
-		
-		
-		// Reply with our current data
+		if (!isReply) {	
+			byte[] ipAddr = new byte[]{uniqueID[0], uniqueID[1], uniqueID[2], uniqueID[3]};
+			InetAddress addr = null;
+			try {
+				addr = InetAddress.getByAddress(ipAddr);
+				System.out.println("Parsed ip address from uniqueHeader" + addr);
+			} catch (UnknownHostException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+			// Reply with our current data
+			gossipTimerTask.sendDataTo(addr.getHostName(), String.valueOf(7777), false);
 		}
 		
 		
