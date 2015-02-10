@@ -1,12 +1,15 @@
 package com.group7.eece411.A2;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Scanner;
 import java.util.Set;
 import java.util.Timer;
 import java.util.Vector;
@@ -27,7 +30,7 @@ public class Service {
 		STOPPED, WAIT_FOR_INIT, ACTIVE_GOSSIP, PASSIVE_GOSSIP
 	}
 
-	private HostPort[] hostPorts = { new HostPort("127.0.0.1", "7777") };
+	private ArrayList<HostPort> hostPorts;
 	private ConcurrentHashMap<String, JSONObject> statsData;
 	private Timer timer;
 	private GossipState currentState;
@@ -41,6 +44,7 @@ public class Service {
 
 		statsData = new ConcurrentHashMap<String, JSONObject>();
 		uniqueIds = new Vector<byte[]>();
+		hostPorts = getHostPorts();
 		
 		this.gossipTimerTask = new GossipTimerTask(hostPorts, statsData, uniqueIds);
 
@@ -123,7 +127,7 @@ public class Service {
 		}
 		
 		// Check if data complete
-		if (statsData.size() == hostPorts.length && this.currentState == GossipState.ACTIVE_GOSSIP) {
+		if (statsData.size() == hostPorts.size() && this.currentState == GossipState.ACTIVE_GOSSIP) {
 			this.setState(GossipState.PASSIVE_GOSSIP);
 		}
 	}
@@ -150,5 +154,26 @@ public class Service {
 
 	private void stopGossipTask() {
 		this.timer.cancel();
+	}
+	
+	private  ArrayList<HostPort> getHostPorts() {
+		hostPorts = new ArrayList<HostPort>();
+		 
+		//Get file from resources folder
+		ClassLoader classLoader = getClass().getClassLoader();
+		File file = new File(classLoader.getResource("file/hosts.txt").getFile());
+	 
+		try (Scanner scanner = new Scanner(file)) {
+			while (scanner.hasNextLine()) {
+				String line = scanner.nextLine();
+				HostPort hp = new HostPort(line, "7777");
+				hostPorts.add(hp);
+			}
+			scanner.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		return hostPorts;
 	}
 }

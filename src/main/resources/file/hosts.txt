@@ -1,0 +1,12 @@
+127.0.0.1
+ple01.fc.univie.ac.at
+onelab1.info.ucl.ac.be
+onelab3.info.ucl.ac.be
+planetlab2.montefiore.ulg.ac.be
+planetlab-1.cs.ucy.ac.cy
+planetlab-4.cs.ucy.ac.cy
+planetlab1.bgu.ac.il
+planetlab2.mta.ac.il
+pl1.sos.info.hiroshima-cu.ac.jp
+planet1.pnl.nitech.ac.jp
+planetlab4.goto.info.waseda.ac.jp

@@ -3,6 +3,7 @@ package com.group7.eece411.A2;
 import java.io.IOException;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.Random;
 import java.util.TimerTask;
 import java.util.Vector;
@@ -20,12 +21,12 @@ public class GossipTimerTask extends TimerTask {
 	private static int NUM_TO_GOSSIP_WITH = 1;
 
 	private static int PORT = 5628;
-	private HostPort[] hostPorts;
+	private ArrayList<HostPort> hostPorts;
 	private UDPClient client;
 	private Vector<byte[]> uniqueIds; 
 	private ConcurrentHashMap<String, JSONObject> statsData;
 
-	public GossipTimerTask(HostPort[] hostPorts,
+	public GossipTimerTask(ArrayList<HostPort> hostPorts,
 			ConcurrentHashMap<String, JSONObject> statsData,
 			Vector<byte[]> uniqueIds) throws UnknownHostException {
 		this.hostPorts = hostPorts;
@@ -62,8 +63,8 @@ public class GossipTimerTask extends TimerTask {
 		Random random = new Random();
 
 		for (int i = 0; i < NUM_TO_GOSSIP_WITH; i++) {
-			int randomIndex = random.nextInt(hostPorts.length);
-			HostPort hostPort = hostPorts[randomIndex];
+			int randomIndex = random.nextInt(hostPorts.size());
+			HostPort hostPort = hostPorts.get(randomIndex);
 			sendDataTo(hostPort.hostName, hostPort.port);
 		}
 	}
