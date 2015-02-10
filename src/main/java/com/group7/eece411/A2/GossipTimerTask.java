@@ -90,15 +90,16 @@ public class GossipTimerTask extends TimerTask {
 						uniqueIds.get(key).remove(hostname);
 					}
 					uniqueIds.remove(key);					
-					if (statsData.size() == hostPorts.size()) {
-						try {
-							this.serv.setState(GossipState.PASSIVE_GOSSIP);
-						} catch (Exception e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
-						}
-					}
+					
 				}
+			}
+		}
+		if (statsData.size() == hostPorts.size()) {
+			try {
+				this.serv.setState(GossipState.PASSIVE_GOSSIP);
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
 		}
 		System.out.println("unique size : "+uniqueIds.size());
