@@ -82,11 +82,11 @@ public class GossipTimerTask extends TimerTask {
 						JSONObject offlineData = new JSONObject();
 						offlineData.put("ping", false);
 						statsData.putIfAbsent(hostname, offlineData);
-						System.out.println("no respond");
+						System.out.println("no respond, size " + statsData.size());
 						System.out.println(statsData.toString());
 						uniqueIds.get(key).remove(hostname);
 					}
-					uniqueIds.remove(key);
+					uniqueIds.remove(key);					
 					if (statsData.size() == hostPorts.size()) {
 						try {
 							this.serv.setState(GossipState.PASSIVE_GOSSIP);
@@ -98,8 +98,9 @@ public class GossipTimerTask extends TimerTask {
 				}
 			}
 		}
-		if(!statsData.containsKey(hostPort.hostName)) {
-			
+		System.out.println("unique size : "+uniqueIds.size());
+		System.out.println("statData size : "+statsData.size());
+		if(!statsData.containsKey(hostPort.hostName)) {			
 			System.out.println("Sending to : " + hostPort.hostName);
 			try {
 				if (SystemCmd.isReachable(hostPort.hostName) == false) {
@@ -111,6 +112,7 @@ public class GossipTimerTask extends TimerTask {
 				} else if(!isRepeated) {
 					sendDataTo(hostPort.hostName, hostPort.port);
 				}
+				System.out.println("size : "+ statsData.size());
 				System.out.println(statsData.toString());
 			} catch (Exception e) {
 				// TODO Send to monitor server
