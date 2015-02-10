@@ -34,6 +34,7 @@ public class ServerInfo extends JSONObject {
 	@SuppressWarnings("unchecked")
 	public void update() throws IOException, ParseException
 	{
+		put("ip", InetAddress.getLocalHost().getHostAddress());
 		put("ping", true);
 		put("ssh", true);
 		put("hostname", SystemCmd.getHostName());
